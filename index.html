@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Pills">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>My Supplement Schedule</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f0;
+    --text2: #9ca0b0;
+    --text3: #5c6070;
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.12);
+    --green-dim: rgba(34,197,94,0.06);
+    --teal: #2dd4bf;
+    --purple: #a78bfa;
+    --amber: #fbbf24;
+    --pink: #f472b6;
+    --blue: #60a5fa;
+    --lime: #84cc16;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    padding-bottom: calc(80px + var(--safe-bottom));
+  }
+
+  /* Header */
+  .header {
+    padding: calc(var(--safe-top) + 16px) 20px 0;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .app-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  .app-title span { color: var(--green); }
+  .header-date { font-size: 12px; color: var(--text2); }
+
+  /* Progress ring */
+  .progress-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 12px 6px 8px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .ring-wrap { position: relative; width: 28px; height: 28px; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-track { fill: none; stroke: var(--border2); stroke-width: 3; }
+  .ring-fill { fill: none; stroke: var(--green); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.4s ease; }
+
+  /* Day tabs */
+  .day-scroll {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 12px 20px;
+    scrollbar-width: none;
+  }
+  .day-scroll::-webkit-scrollbar { display: none; }
+  .day-tab {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    min-width: 52px;
+    transition: all 0.15s;
+  }
+  .day-tab .day-emoji { font-size: 14px; }
+  .day-tab .day-name { font-size: 11px; font-weight: 600; }
+  .day-tab .day-prog { font-size: 10px; color: var(--text3); }
+  .day-tab.active { background: var(--green); color: #0f1117; border-color: transparent; }
+  .day-tab.active .day-prog { color: rgba(0,0,0,0.5); }
+  .day-tab.gym { border-color: rgba(34,197,94,0.3); }
+  .day-tab.run { border-color: rgba(167,139,250,0.3); }
+  .day-tab.gymrun { border-color: rgba(251,191,36,0.3); }
+
+  /* Day badge */
+  .day-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    margin: 0 20px 16px;
+  }
+  .day-badge.gym { background: rgba(34,197,94,0.12); color: var(--green); }
+  .day-badge.run { background: rgba(167,139,250,0.12); color: var(--purple); }
+  .day-badge.gymrun { background: rgba(251,191,36,0.12); color: var(--amber); }
+  .day-badge.rest { background: rgba(96,165,250,0.10); color: var(--blue); }
+  .day-badge.normal { background: rgba(255,255,255,0.06); color: var(--text2); }
+
+  /* Content */
+  .content { padding: 0 16px; }
+
+  /* Time blocks */
+  .block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .block-time { font-size: 14px; font-weight: 600; color: var(--text); }
+  .block-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .mark-all-btn {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .mark-all-btn.done { background: var(--green-bg); color: var(--green); border-color: rgba(34,197,94,0.3); }
+
+  /* Pills */
+  .block-pills { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .pill-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.12s;
+    background: var(--bg);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .pill-item:active { transform: scale(0.98); }
+  .pill-item.checked { background: var(--green-dim); border-color: rgba(34,197,94,0.2); }
+  .pill-item.checked .pill-name { text-decoration: line-through; color: var(--text3); }
+  .checkbox {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--border2);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    transition: all 0.15s;
+    background: transparent;
+  }
+  .checkbox.on { background: var(--green); border-color: var(--green); color: #0f1117; font-weight: 700; }
+  .cat-bar { width: 3px; height: 28px; border-radius: 2px; flex-shrink: 0; }
+  .pill-info { flex: 1; min-width: 0; }
+  .pill-name { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.3; }
+  .pill-dose { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* Tip */
+  .block-tip {
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1.5;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.02);
+    border-top: 1px solid var(--border);
+    border-left: 3px solid var(--border2);
+  }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 10px 0 calc(10px + var(--safe-bottom));
+    z-index: 200;
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    color: var(--text3);
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 0;
+    transition: color 0.15s;
+  }
+  .nav-btn.active { color: var(--green); }
+  .nav-btn svg { width: 22px; height: 22px; }
+
+  /* Edit panel */
+  .panel { display: none; padding: 0 16px; }
+  .panel.active { display: block; }
+  .panel-title { font-size: 18px; font-weight: 700; margin: 20px 0 16px; }
+  .edit-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .edit-block-header {
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .add-pill-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--green);
+    cursor: pointer;
+  }
+  .edit-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .edit-pill:last-child { border-bottom: none; }
+  .edit-pill input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    min-width: 0;
+  }
+  .edit-pill input::placeholder { color: var(--text3); }
+  .edit-pill input.dose-input { color: var(--text3); font-size: 11px; max-width: 120px; text-align: right; }
+  .del-btn {
+    background: transparent;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 4px;
+    line-height: 1;
+  }
+  .del-btn:hover { color: #f87171; }
+  .save-banner {
+    position: fixed;
+    bottom: calc(70px + var(--safe-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--green);
+    color: #0f1117;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 300;
+  }
+  .save-banner.show { opacity: 1; }
+
+  /* Today highlight */
+  .today-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--green);
+    margin: 0 auto;
+  }
+
+  /* Info panel */
+  .info-section { margin-bottom: 20px; }
+  .info-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text2);
+  }
+  .info-card strong { color: var(--text); font-weight: 600; }
+  .reset-day-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.15s;
+  }
+  .reset-day-btn:hover { background: rgba(248,113,113,0.1); color: #f87171; border-color: rgba(248,113,113,0.3); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="app-title">My <span>Pills</span> 💊</div>
+      <div class="header-date" id="header-date"></div>
+    </div>
+    <div class="progress-pill">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 28 28" width="28" height="28">
+          <circle class="ring-track" cx="14" cy="14" r="11"/>
+          <circle class="ring-fill" id="ring-fill" cx="14" cy="14" r="11"
+            stroke-dasharray="69.1" stroke-dashoffset="69.1"/>
+        </svg>
+      </div>
+      <span id="progress-text">0 / 0</span>
+    </div>
+  </div>
+  <div class="day-scroll" id="day-tabs"></div>
+</div>
+
+<div id="today-panel" class="panel active">
+  <div style="height:14px"></div>
+  <div id="day-badge-wrap"></div>
+  <div class="content" id="blocks-container"></div>
+  <div style="padding: 0 16px; margin-bottom: 10px;">
+    <button class="reset-day-btn" onclick="resetDay()">↺ Reset today's checks</button>
+  </div>
+</div>
+
+<div id="edit-panel" class="panel">
+  <div class="panel-title">Edit schedule ✏️</div>
+  <div id="edit-container"></div>
+  <div style="height: 20px;"></div>
+</div>
+
+<div id="info-panel" class="panel">
+  <div class="panel-title">Rules to remember 📋</div>
+  <div class="info-section">
+    <h3>⚠️ Take with fat (food)</h3>
+    <div class="info-card"><strong>D3+K2, Omega-3, Curcumin, Ashwagandha, Berberine</strong> — must be taken with a meal containing fat. They don't absorb otherwise.</div>
+  </div>
+  <div class="info-section">
+    <h3>⏱ Empty stomach only</h3>
+    <div class="info-card"><strong>NMN + Manuka honey</strong> — first thing in the morning, 20 min before eating. This is your gut healing window.</div>
+  </div>
+  <div class="info-section">
+    <h3>🔄 Cycle, don't take forever</h3>
+    <div class="info-card"><strong>Healthy Detox</strong> — 30 days on, 30 days off.<br><strong>Rhodiola + NAC</strong> — 5 days on (Mon–Fri), 2 days off.<br><strong>L-Theanine+Caffeine + Yerba Mate</strong> — weekdays only.</div>
+  </div>
+  <div class="info-section">
+    <h3>💪 Gym days</h3>
+    <div class="info-card"><strong>Creatine</strong> — gym days only (Mon/Wed/Sat). Consistency matters — take it every gym day.<br><strong>L-Carnitine</strong> — 30 min before any workout or run. Burns fat during movement.<br><strong>Collagen</strong> — right after gym. Repairs joints and connective tissue.</div>
+  </div>
+  <div class="info-section">
+    <h3>🌙 Non-negotiables every night</h3>
+    <div class="info-card"><strong>Magnesium</strong> — every single night. Best thing you can do for your stomach, stress, and sleep.</div>
+  </div>
+  <div class="info-section">
+    <h3>🍋 Boost your collagen</h3>
+    <div class="info-card">Have something with <strong>vitamin C</strong> at dinner — lemon water, tomatoes, capsicum. Doubles collagen absorption.</div>
+  </div>
+  <button class="reset-day-btn" onclick="resetDay()">↺ Reset today's checks</button>
+  <div style="height:20px"></div>
+</div>
+
+<div class="save-banner" id="save-banner">Saved ✓</div>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-today" onclick="switchTab('today')">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+    Today
+  </button>
+  <button class="nav-btn" id="nav-edit" onclick="switchTab('edit')">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Edit
+  </button>
+  <button class="nav-btn" id="nav-info" onclick="switchTab('info')">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    Rules
+  </button>
+</nav>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const DAY_TYPE = { Mon:"gym", Tue:"run", Wed:"gymrun", Thu:"run", Fri:"normal", Sat:"gym", Sun:"rest" };
+const DAY_EMOJI = { gym:"🏋️", run:"🏃", gymrun:"🏋️🏃", rest:"😴", normal:"📚" };
+const DAY_LABEL = { gym:"Gym day", run:"Run day", gymrun:"Gym + run day", rest:"Rest day", normal:"Work day" };
+
+const CAT_COLOR = { gut:"#22c55e", focus:"#a78bfa", weight:"#fbbf24", skin:"#f472b6", stress:"#60a5fa", longevity:"#84cc16" };
+
+function defaultSchedule(type) {
+  const isGym = type==="gym"||type==="gymrun";
+  const isRun = type==="run"||type==="gymrun";
+  const isActive = isGym||isRun;
+  const isRest = type==="rest";
+
+  const blocks = [];
+
+  blocks.push({
+    id:"wake", time:"🌅 Wake up", sub:"Empty stomach — first thing",
+    tip:"Wait 20 min before eating. These two heal your gut lining.",
+    items:[
+      {id:"nmn",name:"NMN powder",dose:"½ tsp in water",cat:"longevity"},
+      {id:"manuka",name:"Manuka honey",dose:"1 tsp alone",cat:"gut"},
+    ]
+  });
+
+  if(isActive) blocks.push({
+    id:"preworkout",
+    time: isGym ? "🏋️ Pre-workout" : "🏃 Pre-run",
+    sub:"30 min before — small water only",
+    tip: isGym ? "L-Carnitine burns fat during your session. Creatine is for strength — take it every gym day." : "No creatine on run days. L-Carnitine helps fat-burning during cardio.",
+    items:[
+      {id:"carnitine",name:"L-Carnitine",dose:"1 capsule",cat:"weight"},
+      {id:"electrolytes",name:"ZEROLyte electrolytes",dose:"1 packet in water",cat:"stress"},
+      ...(isGym?[{id:"creatine",name:"Creatine powder",dose:"3–5g in water",cat:"longevity"}]:[]),
+      {id:"theanine_pre",name:"L-Theanine + Caffeine",dose:"1 softgel",cat:"focus"},
+    ]
+  });
+
+  blocks.push({
+    id:"breakfast", time:"🍳 Breakfast", sub:"With food — must have fat",
+    tip:"Take with eggs, labneh, avocado, or olive oil. These won't absorb without fat.",
+    items:[
+      {id:"omega3",name:"Omega-3 ProOmega 2000-D",dose:"2 softgels",cat:"longevity"},
+      {id:"d3k2",name:"D3 + K2",dose:"1 softgel",cat:"skin"},
+      {id:"ashwa",name:"Ashwagandha",dose:"1 capsule",cat:"stress"},
+      ...(!isRest?[{id:"rhodiola",name:"Rhodiola",dose:"1 cap (Mon–Fri only)",cat:"stress"}]:[]),
+      {id:"biotin",name:"Biotin (hair/skin/nails)",dose:"1 softgel",cat:"skin"},
+      ...(!isActive?[{id:"theanine_bf",name:"L-Theanine + Caffeine",dose:"1 softgel",cat:"focus"}]:[]),
+    ]
+  });
+
+  blocks.push({
+    id:"lunch", time:"🥗 Lunch", sub:"Enzymes 5 min before eating",
+    tip:"Berberine controls blood sugar after this meal — don't skip it.",
+    items:[
+      {id:"enzymes_l",name:"Digestive enzymes",dose:"1–2 caps BEFORE eating",cat:"gut"},
+      {id:"gut1",name:"Healthy Gut (green bottle)",dose:"1 capsule",cat:"gut"},
+      {id:"berberine",name:"Berberine Phytosome",dose:"1 capsule",cat:"weight"},
+      ...(!isRest?[{id:"nac",name:"NAC Sustain 600mg",dose:"1 tablet (Mon–Fri)",cat:"longevity"}]:[]),
+      ...(!isRest?[{id:"yerba",name:"Yerba Mate",dose:"1 tablet",cat:"weight"}]:[]),
+    ]
+  });
+
+  if(isGym) blocks.push({
+    id:"postworkout", time:"💪 Post-workout", sub:"Within 1 hour of finishing gym",
+    tip:"Collagen right after strength training helps joints repair. Have vitamin C with it.",
+    items:[
+      {id:"collagen_pw",name:"Collagen peptides",dose:"1 scoop in drink",cat:"skin"},
+    ]
+  });
+
+  blocks.push({
+    id:"dinner", time:"🍽 Dinner", sub:"Enzymes 5 min before eating",
+    tip:"Have lemon water or tomatoes — vitamin C doubles collagen absorption.",
+    items:[
+      {id:"enzymes_d",name:"Digestive enzymes",dose:"1–2 caps BEFORE eating",cat:"gut"},
+      {id:"gut2",name:"Healthy Gut + Vit D (blue bottle)",dose:"1 capsule",cat:"gut"},
+      {id:"sboulardii",name:"S. Boulardii + MOS",dose:"1 capsule",cat:"gut"},
+      ...(!isGym?[{id:"collagen_d",name:"Collagen peptides",dose:"1 scoop in drink",cat:"skin"}]:[]),
+      {id:"haircollagen",name:"Hair collagen + keratin",dose:"2 mini tablets",cat:"skin"},
+      {id:"chromium",name:"Chromium Picolinate",dose:"1 cap (Mon/Wed/Fri)",cat:"weight"},
+    ]
+  });
+
+  blocks.push({
+    id:"bed", time:"🌙 Bedtime", sub:"30 min before sleep",
+    tip:"Magnesium every single night. Non-negotiable — best thing for your stomach and sleep.",
+    items:[
+      {id:"mag",name:"Magnesium powder",dose:"1 scoop in water",cat:"stress"},
+      {id:"probiotic",name:"Ideal Bowel Support probiotic",dose:"1 capsule",cat:"gut"},
+      {id:"curcumin",name:"Curcumin (Solgar)",dose:"1 cap with small snack",cat:"longevity"},
+      ...(isRest?[{id:"b5",name:"Pantothenic acid B5",dose:"1 capsule (rest day recovery)",cat:"stress"}]:[]),
+    ]
+  });
+
+  return blocks;
+}
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+function loadData() {
+  try { return JSON.parse(localStorage.getItem("mypills_v3") || "{}"); } catch(e) { return {}; }
+}
+function saveData(data) {
+  try { localStorage.setItem("mypills_v3", JSON.stringify(data)); } catch(e) {}
+}
+
+let state = loadData();
+if(!state.checked) state.checked = {};
+if(!state.customSchedules) state.customSchedules = {};
+
+let currentDay = DAYS[new Date().getDay()===0?6:new Date().getDay()-1];
+let currentTab = "today";
+
+function getSchedule(day) {
+  if(state.customSchedules[day]) return state.customSchedules[day];
+  return defaultSchedule(DAY_TYPE[day]);
+}
+
+function getKey(day, blockId, itemId) { return day+"__"+blockId+"__"+itemId; }
+
+function getProgress(day) {
+  const sched = getSchedule(day);
+  let total=0, done=0;
+  sched.forEach(b => b.items.forEach(it => { total++; if(state.checked[getKey(day,b.id,it.id)]) done++; }));
+  return {total, done};
+}
+
+// ── RENDER TODAY ───────────────────────────────────────────────────────────
+function renderTabs() {
+  const container = document.getElementById("day-tabs");
+  container.innerHTML = "";
+  const todayIdx = new Date().getDay()===0?6:new Date().getDay()-1;
+
+  DAYS.forEach((d, i) => {
+    const t = DAY_TYPE[d];
+    const {done, total} = getProgress(d);
+    const isToday = i===todayIdx;
+    const btn = document.createElement("button");
+    btn.className = ["day-tab", t==="gymrun"?"gymrun":t==="gym"?"gym":t==="run"?"run":"", d===currentDay?"active":""].filter(Boolean).join(" ");
+    btn.innerHTML = `<div class="day-emoji">${DAY_EMOJI[t]||"📅"}</div><div class="day-name">${d}</div>${isToday?'<div class="today-dot"></div>':''}<div class="day-prog">${done}/${total}</div>`;
+    btn.onclick = () => { currentDay = d; renderToday(); renderTabs(); renderEdit(); };
+    container.appendChild(btn);
+  });
+}
+
+function renderBadge() {
+  const t = DAY_TYPE[currentDay];
+  document.getElementById("day-badge-wrap").innerHTML =
+    `<div class="day-badge ${t}" style="margin-left:16px">${DAY_EMOJI[t]} ${DAY_LABEL[t]}</div>`;
+}
+
+function renderBlocks() {
+  const sched = getSchedule(currentDay);
+  const container = document.getElementById("blocks-container");
+  container.innerHTML = "";
+  let totalAll=0, doneAll=0;
+
+  sched.forEach(block => {
+    const doneItems = block.items.filter(it => state.checked[getKey(currentDay,block.id,it.id)]);
+    const allDone = doneItems.length === block.items.length;
+    totalAll += block.items.length;
+    doneAll += doneItems.length;
+
+    const div = document.createElement("div");
+    div.className = "block";
+
+    const pillsHTML = block.items.map(it => {
+      const k = getKey(currentDay, block.id, it.id);
+      const done = !!state.checked[k];
+      const color = CAT_COLOR[it.cat] || "#9ca0b0";
+      return `<div class="pill-item${done?" checked":""}" onclick="togglePill('${currentDay}','${block.id}','${it.id}')">
+        <div class="checkbox${done?" on":""}">${done?"✓":""}</div>
+        <div class="cat-bar" style="background:${color}"></div>
+        <div class="pill-info">
+          <div class="pill-name">${it.name}</div>
+          <div class="pill-dose">${it.dose}</div>
+        </div>
+      </div>`;
+    }).join("");
+
+    div.innerHTML = `
+      <div class="block-header">
+        <div>
+          <div class="block-time">${block.time}</div>
+          <div class="block-sub">${block.sub}</div>
+        </div>
+        <button class="mark-all-btn${allDone?" done":""}" onclick="markBlock('${currentDay}','${block.id}')">${allDone?"✓ Done":"Mark done"}</button>
+      </div>
+      <div class="block-pills">${pillsHTML}</div>
+      <div class="block-tip">💡 ${block.tip}</div>`;
+    container.appendChild(div);
+  });
+
+  updateProgress(doneAll, totalAll);
+}
+
+function updateProgress(done, total) {
+  const pct = total>0 ? done/total : 0;
+  const circumference = 69.1;
+  const offset = circumference - (pct * circumference);
+  document.getElementById("ring-fill").style.strokeDashoffset = offset;
+  document.getElementById("progress-text").textContent = done+" / "+total;
+}
+
+function renderToday() {
+  renderBadge();
+  renderBlocks();
+  // update date
+  const d = new Date();
+  document.getElementById("header-date").textContent = d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+}
+
+// ── INTERACTIONS ──────────────────────────────────────────────────────────
+function togglePill(day, blockId, itemId) {
+  const k = getKey(day, blockId, itemId);
+  state.checked[k] = !state.checked[k];
+  saveData(state);
+  renderBlocks();
+  renderTabs();
+}
+
+function markBlock(day, blockId) {
+  const sched = getSchedule(day);
+  const block = sched.find(b=>b.id===blockId);
+  if(!block) return;
+  const allDone = block.items.every(it=>state.checked[getKey(day,blockId,it.id)]);
+  block.items.forEach(it=>{ state.checked[getKey(day,blockId,it.id)] = !allDone; });
+  saveData(state);
+  renderBlocks();
+  renderTabs();
+}
+
+function resetDay() {
+  const sched = getSchedule(currentDay);
+  sched.forEach(b=>b.items.forEach(it=>{ state.checked[getKey(currentDay,b.id,it.id)] = false; }));
+  saveData(state);
+  renderBlocks();
+  renderTabs();
+}
+
+// ── EDIT TAB ──────────────────────────────────────────────────────────────
+function renderEdit() {
+  const sched = getSchedule(currentDay);
+  const container = document.getElementById("edit-container");
+  container.innerHTML = `<p style="font-size:13px;color:var(--text2);margin-bottom:16px">Editing: <strong style="color:var(--text)">${currentDay} — ${DAY_LABEL[DAY_TYPE[currentDay]]}</strong><br><span style="font-size:11px;color:var(--text3)">Changes save automatically.</span></p>`;
+
+  sched.forEach((block, bi) => {
+    const div = document.createElement("div");
+    div.className = "edit-block";
+    div.innerHTML = `
+      <div class="edit-block-header">
+        <span>${block.time}</span>
+        <button class="add-pill-btn" onclick="addPill('${currentDay}',${bi})">+ Add pill</button>
+      </div>
+      <div id="edit-block-${bi}">
+        ${block.items.map((it,ii)=>`
+          <div class="edit-pill" id="ep-${bi}-${ii}">
+            <input value="${it.name}" placeholder="Supplement name" onchange="editItem('${currentDay}',${bi},${ii},'name',this.value)" />
+            <input class="dose-input" value="${it.dose}" placeholder="dose" onchange="editItem('${currentDay}',${bi},${ii},'dose',this.value)" />
+            <button class="del-btn" onclick="deleteItem('${currentDay}',${bi},${ii})">×</button>
+          </div>`).join("")}
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+function ensureCustom(day) {
+  if(!state.customSchedules[day]) {
+    state.customSchedules[day] = JSON.parse(JSON.stringify(defaultSchedule(DAY_TYPE[day])));
+  }
+}
+
+function editItem(day, bi, ii, field, val) {
+  ensureCustom(day);
+  state.customSchedules[day][bi].items[ii][field] = val;
+  saveData(state);
+  showSaved();
+}
+
+function deleteItem(day, bi, ii) {
+  ensureCustom(day);
+  state.customSchedules[day][bi].items.splice(ii, 1);
+  saveData(state);
+  renderEdit();
+  renderBlocks();
+  showSaved();
+}
+
+function addPill(day, bi) {
+  ensureCustom(day);
+  state.customSchedules[day][bi].items.push({
+    id:"custom_"+Date.now(), name:"New supplement", dose:"1 capsule", cat:"longevity"
+  });
+  saveData(state);
+  renderEdit();
+  renderBlocks();
+  showSaved();
+}
+
+function showSaved() {
+  const b = document.getElementById("save-banner");
+  b.classList.add("show");
+  setTimeout(()=>b.classList.remove("show"), 1800);
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  ["today","edit","info"].forEach(t => {
+    document.getElementById(t+"-panel").classList.toggle("active", t===tab);
+    document.getElementById("nav-"+t).classList.toggle("active", t===tab);
+  });
+  if(tab==="edit") renderEdit();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+renderTabs();
+renderToday();
+
+// Scroll current day into view
+setTimeout(()=>{
+  const tabs = document.getElementById("day-tabs");
+  const idx = DAYS.indexOf(currentDay);
+  const btn = tabs.children[idx];
+  if(btn) btn.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
+},100);
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js");}</script>
+</body>
+</html>
